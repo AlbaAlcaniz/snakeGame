@@ -11,7 +11,7 @@ class cube(object):
     """
     rows = 20
     width = 500
-    def __init__(self, start, dirnx = 1, dirny = 0, color = (255,0,0)):
+    def __init__(self, start, dirnx = 1, dirny = 0, color = (148,0,211)):
         """Initialize the cube objects by setting the arguments:
 
         Args:
@@ -37,21 +37,39 @@ class cube(object):
         self.dirny = dirny
         self.pos = (self.pos[0] + self.dirnx, self.pos[1] + self.dirny)
 
-    def draw(self, surface, eyes = False):
-        """Function that draws the cube itself.
+    def draw_snake(self, surface, eyes = False, tail = False):
+        """Function that draws the snake as octahedra, except for the tail, which is a triangle.
 
         Args:
             surface (window?): window in which the cube will be displayed
             eyes (bool, optional): Whether the eyes of the snake are drawn or not. 
             Defaults to False because the snake only has eyes on the head (xD)
+            tail (bool, optional): The tail of the snake is a triangle instead of an octahedra
         """
         dis = self.width // self.rows #width of each square of the grid
         i = self.pos[0] #row
         j = self.pos[1] #column
 
-        # We draw the square in which the cube is
-        pygame.draw.rect(surface, self.color, (i*dis+1, j*dis+1, dis-2, dis-2))
+        # Define the distances needed for drawing the octahedra
+        x_m = i*dis; y_m = j*dis; x_M = x_m + dis-2; y_M = y_m + dis-2
+        x_med = int((x_m+x_M)/2); y_med = int((y_m+y_M)/2)
+        mar = 5
 
+        if tail:
+            # Draw the triangle of the tail depending on the direction in which it moves
+            if self.dirnx == -1 and self.dirny == 0:
+                pygame.draw.polygon(surface, self.color, [(x_m, y_m+mar), (x_M, y_med), (x_m, y_M-mar)])
+            elif self.dirnx == 1 and self.dirny == 0:
+                pygame.draw.polygon(surface, self.color, [(x_M, y_m+mar), (x_m, y_med), (x_M, y_M-mar)])
+            elif self.dirnx == 0 and self.dirny == -1:
+                pygame.draw.polygon(surface, self.color, [(x_m+mar, y_m), (x_med, y_M), (x_M-mar, y_m)])
+            elif self.dirnx == 0 and self.dirny == 1:
+                pygame.draw.polygon(surface, self.color, [(x_m+mar, y_M), (x_med, y_m), (x_M-mar, y_M)])
+        else:
+            # If you're not drawing the tail, draw the octahedra that represents the snake's body
+            pygame.draw.polygon(surface, self.color, [(x_m+mar, y_m), (x_M-mar, y_m), (x_M, y_m+mar), \
+                (x_M, y_M-mar), (x_M-mar, y_M), (x_m+mar, y_M), (x_m, y_M-mar), (x_m, y_m+mar)])
+        
         # We don't want the snake blind, so we better draw some eyes on the head cube
         if eyes:
             centre = dis//2
@@ -60,6 +78,34 @@ class cube(object):
             circleMiddle2 = (i*dis+dis-radius*2, j*dis+8)
             pygame.draw.circle(surface, (0,0,0), circleMiddle, radius)
             pygame.draw.circle(surface, (0,0,0), circleMiddle2, radius)
+        
+    def draw_apple(self, surface, rotten = False):
+        """Function that draws the apple and its root
+
+        Args:
+            surface (window?): window in which the cube will be displayed
+            rotten (bool, optional): Rotten apples have a grey color. Defaults to False.
+        """
+        dis = self.width // self.rows #width of each square of the grid
+        i = self.pos[0] #row
+        j = self.pos[1] #column
+
+        # Set the color of the apple depending on whether it's rotten or not
+        if rotten:
+            color = (100,100,100)
+        else:
+            color = (255,0,0)
+
+        # Define useful distances for the drawing 
+        x_m = i*dis; y_m = j*dis; x_M = x_m + dis; y_M = y_m + dis; x_med = int((x_M+x_m)/2)
+        a = 5; b = 3; c = 4; d = 5
+        # Draw the apple
+        pygame.draw.polygon(surface, color, [(x_M-a, y_M), (x_med,y_M-b), (x_m+a, y_M), \
+            (x_m,y_m+c), (x_m+c,y_m), (x_med,y_m+d), (x_M-c,y_m), (x_M,y_m+c)])
+
+        # Draw the root of the apple
+        e = 2; f = c
+        pygame.draw.polygon(surface, (0,255,0), [(x_med-e,y_m-d), (x_med+e,y_m+d), (x_med,y_m+f)])
 
 class snake(object):
     """Create a class for the snake
@@ -208,20 +254,23 @@ class snake(object):
         tail = self.body[-1]
         self.body.remove(tail)
 
-    def draw(self, surface):
+    def draw_snake(self, surface):
         """Draw the snake so that the player knows what is going on
 
         Args:
             surface (window?): window in which the snake will be displayed
         """
-        # Draw all the cubes which represent the snake
+        # Draw all the octahedra which represent the snake
         for i, c in enumerate(self.body):
             if i ==0:
                 #Only to add this to draw the eyes of the snake
-                c.draw(surface, True)
+                c.draw_snake(surface, True)
+            elif i == len(self.body)-1 and len(self.body) > 1:
+                # Draw the tail of the snake if it's not only the head
+                c.draw_snake(surface, tail = True)
             else:
-                c.draw(surface)
-
+                c.draw_snake(surface)
+        
 def drawGrid(width, rows, surface):
     """This function draws the white lines on top of the black background which represents the 
     grid, where the snake and the snack will be displayed and interact with the user.
@@ -244,6 +293,14 @@ def drawGrid(width, rows, surface):
         # Draw the white lines which divide the grid
         pygame.draw.line(surface, color_lines, (x, 0), (x, width))
         pygame.draw.line(surface, color_lines, (0, y), (width, y))
+    
+    # If the walls are active, surround the grid by brown lines so that the player is aware of them
+    if walls == 1:
+        color_walls = (204,102,0); width_walls = 7
+        pygame.draw.line(surface, color_walls, (0, 0), (0, width),width_walls)
+        pygame.draw.line(surface, color_walls, (x, 0), (x, width),width_walls)
+        pygame.draw.line(surface, color_walls, (0, 0), (width, 0),width_walls)
+        pygame.draw.line(surface, color_walls, (0, y), (width, y),width_walls)
 
     pass    
 
@@ -260,18 +317,18 @@ def redrawWindow(surface):
     global rows, width, s, snack, rot_apple
     color_surface = (0, 0, 0) #Black
     surface.fill(color_surface) #Black background
-    s.draw(surface) #Plot the snake
-    snack.draw(surface) #Plot the snack
+    s.draw_snake(surface) #Plot the snake
+    snack.draw_apple(surface) #Plot the apple
     # If the player has decided to play with rotten apples, they appear if the 
     # snake is more than only the head
     if len(s.body) > 1 and rot_apple_on == 1:
-        rot_apple.draw(surface)
-    drawGrid(width, rows, surface) #Plot the white lines of the grid
+        rot_apple.draw_apple(surface,True)
+    drawGrid(width, rows, surface) #Plot the white lines of the grid and the walls if apply
     pygame.display.update() #Update the changes done on the window
 
     pass
 
-def randomSnack(rows, item):
+def randomSnack(rows, item, item_list):
     """After the snake has eaten the snack, a new snack has to appear in a random position.
     This function gives you the new position of the snack
 
@@ -295,6 +352,12 @@ def randomSnack(rows, item):
             continue
         else:
             break
+        # Make sure we don't put an apple on top of another apple
+        for it in range(len(item_list)):
+            print(item_list[it].pos)
+            if x == item_list[it].pos[0] and y == item_list[it].pos[0]:
+                break
+
     return (x,y)
 
 def lost_game(score):
@@ -306,7 +369,7 @@ def lost_game(score):
     Returns:
         walls (boolean): if the player has decided to play again, returns the walls variable, which
         represents the user choice of the walls or not 
-        rot_apple_on (boolean): if the player has decided to play again, returns its choose regading
+        rot_apple_on (boolean): if the player has decided to play again, returns its choice regading
         the appearance of rotten apples 
     """
     # Print the score you have achieved
@@ -331,7 +394,7 @@ def lost_game(score):
         exit()
 
 def message_box_levels(subject):
-    """Function for the beginning of the game which lets you choose the game options
+    """Function for the beginning of the game which lets you choose the game options.
 
     Args:
         subject (string): message seen by the player
@@ -393,10 +456,10 @@ def main():
     win = pygame.display.set_mode((width, width))
     # Determine the initial position of the snake in the middle of the window
     position = (int(rows/2), int(rows/2))
-    color = (255, 0, 0) # color of the snake
+    color = (148,0,211) # color of the snake
     s = snake(color, position) #Initialize the snake
-    snack = cube(randomSnack(rows, s), color = (0, 255, 0)) #Initialize the snack
-    rot_apple = cube(randomSnack(rows, s), color = (100,100,100)) #Initialize the rotten apple
+    snack = cube(randomSnack(rows, s, []), color = (255,0, 0)) #Initialize the snack
+    rot_apple = cube(randomSnack(rows, s, [snack]), color = (100,100,100)) #Initialize the rotten apple
     flag = True #auxiliar variable which is true until you lost
 
     clock = pygame.time.Clock() # activate the game clock
@@ -414,13 +477,13 @@ def main():
         # random position for the snack
         if s.body[0].pos == snack.pos:
             s.addCube()
-            snack = cube(randomSnack(rows, s), color = (0, 255, 0))
+            snack = cube(randomSnack(rows, s, [rot_apple]), color = (255, 0, 0))
         
         # If the snake eats a rotten apple, and the player has decided to play with rotten apples
         # the length of the snake is reduced by one
         if s.body[0].pos == rot_apple.pos and rot_apple_on == 1:
             s.removeCube()
-            rot_apple = cube(randomSnack(rows, s), color = (100,100,100))
+            rot_apple = cube(randomSnack(rows, s, [snack]), color = (100,100,100))
 
         # If the snake eats itself (not something very intelligent to do), you lose
         for x in range(len(s.body)):

@@ -81,6 +81,8 @@ class snake(object):
         # Direction for x and y
         self. dirnx = 0
         self. dirny = 1
+        # Variable which tells us whether the snake has hit the walls (1) or not (0). 
+        self. walls_hit = 0
 
     def move(self):
         """This function defines the movement of the snake following the instructions given by the 
@@ -91,13 +93,13 @@ class snake(object):
             # If the player wants to quit, he/she should have the right, right?
             if event.type == pygame.QUIT:
                 pygame.quit()
-
+            
             # If a key is pressed, we need to know which one is
             keys = pygame.key.get_pressed()
 
             for key in keys:
                 # In this for loop, we change the direction of the snake according to the key
-                # pressed by the player 
+                # pressed by the player
                 if keys[pygame.K_LEFT]:
                     self.dirnx = -1
                     self.dirny = 0
@@ -126,7 +128,7 @@ class snake(object):
                     #We need to remember where we turned
                     self.turns[self.head.pos[:]] = [self.dirnx, self.dirny]
 
-        # look the positions of the bosy of the snake
+        # look the positions of the body of the snake
         # get the index and cube object in the body
         for i, c in enumerate(self.body):
             #Makes a copy so we don't change the position of the snake
@@ -148,13 +150,25 @@ class snake(object):
                 elif c.dirny == 1 and c.pos[1] >= c.rows-1: c.pos = (c.pos[0], 0)
                 elif c.dirny == -1 and c.pos[1] <= 0: c.pos = (c.pos[0], c.rows-1)
                 else: c.move(c.dirnx, c.dirny)
+        
+        # If the user has decided to play with the walls active
+        if walls == 1:
+            # You lose if the snake hits the edges of the screen
+            if c.dirnx == -1 and self.head.pos[0] == c.rows-1: s.walls_hit = 1
+            if c.dirnx == 1 and self.head.pos[0] == 0: s.walls_hit = 1        
+            if c.dirny == 1 and self.head.pos[1] == 0: s.walls_hit = 1
+            if c.dirny == -1 and self.head.pos[1] == c.rows-1: s.walls_hit = 1
 
     def reset(self, pos):
         """Function for resetting the snake after the player has lost
 
         Args:
             pos (array (x,y)): original position of the snake
+
+        Returns:
+            walls: variable which tells you whether the player has decided to turn on the walls or not
         """
+        walls = message_box_levels('Welcome to the snake!') #The player chooses the walls active or not
         # The next commands initialize the snake performing almost the same as the __init__ function
         self.head = cube(pos)
         self.body = []
@@ -162,6 +176,8 @@ class snake(object):
         self.turns = {}
         self.dirnx = 0
         self.dirny = 1
+        self.walls_hit = 0
+        return walls
 
     def addCube(self):
         """When the snake eats a snack, it grows by adding a cube to its body
@@ -211,13 +227,12 @@ def drawGrid(width, rows, surface):
     size_between = width // rows
 
     # Plot all the horizontal and vertical white lines
-    x = 0
-    y = 0
+    x = 0; y = 0
+    color_lines = (255, 255, 255) #White
     for l in range(rows):
-        x += size_between
+        x += size_between # Every iteration add the size of the square in order to plot the next line
         y += size_between
 
-        color_lines = (255, 255, 255) #White
         # Draw the white lines which divide the grid
         pygame.draw.line(surface, color_lines, (x, 0), (x, width))
         pygame.draw.line(surface, color_lines, (0, y), (width, y))
@@ -263,38 +278,92 @@ def randomSnack(rows, item):
         # Find a new random position for the snack
         x = random.randrange(rows)
         y = random.randrange(rows)
-        # Make sure we don't put a snack on top of the snake
+        # Make sure we don't put a snack on top of the snake. Otherwise, just look for a new position
         if len(list(filter(lambda z:z.pos == (x,y), positions))) > 0:
             continue
         else:
             break
     return (x,y)
 
-def message_box(subject, content):
-    """Message box that appears at the beginning and end of the game
+def lost_game(score):
+    """Function that appears once you've lost
 
     Args:
-        subject (string): message that appears on the top of the window
-        content (string): message seen by the player
+        score (int): length of the snake, which represents your score
+
+    Returns:
+        walls (boolean): only if the player has decided to play again, returns the walls variable, which
+        represents the user choice of the walls or not 
     """
+    # Print the score you have achieved
+    print('Score: ', score)
+
     # Create a new window in which the player can choose to play again
     root = tk.Tk()
     # Make sure that the window appears on top
     root.attributes('-topmost', True)
     root.withdraw()
-    # Display a simple message box
-    messagebox.showinfo(subject, content)
-    try:
+    # Appear the message box which asks a question
+    MsgBox = messagebox.askquestion ('You lost...','Play again?')
+    if MsgBox == 'yes':
+        # If you want to play again, destroy the window which tells you you've lost, and reset
+        # the game.
         root.destroy()
-    except:
-        pass
+        walls = s.reset((10,10))
+        return walls
+    else:
+        # If you don't want to play again (coward), exit python
+        exit()
 
+def message_box_levels(subject):
+    """Function for the beginning of the game which lets you choose the levels of the game.
+    For now, you can only choose whether you want walls or not on the game.
+
+    Args:
+        subject (string): message seen by the player
+
+    Returns:
+        walls (boolean): represents the player choice of the walls active or not
+    """
+
+    # Create a window in which the player can choose the game options
+    root = tk.Tk()
+    #Make sure that the window appears on top
+    root.attributes('-topmost', True)
+
+    def callback():
+        """Function which activates when the player clicks the "let's play" button
+        It destroys the window of the levels so that the pygame window can appear
+        """
+        root.destroy()
+
+    # Display a message for the player
+    w = tk.Message(root, text=subject)
+    w.pack()
+
+    walls = tk.IntVar() #Initiallize the boolean variable "walls"
+    # The choice of the checkbutton by the player decides the value of the variable walls:
+    # walls = 0 if the box is unchecked, while walls = 1 if the box is checked.
+    c = tk.Checkbutton(root, text="Walls limit", variable = walls)
+    c.pack()
+
+    # Button for the starting of the game. Once clicked it destroys the window of the levels
+    b = tk.Button(root, text="Let's play", command=callback)
+    b.pack()
+
+    # Start the window so that everything is displayed
+    root.mainloop()
+    
+    return walls.get()
 
 def main():
     """Main function which relates the rest of functions and classes
     """
     # Make global all the following self-explanatory variables (s = snake)
-    global width, rows, s, snack
+    global width, rows, s, snack, walls
+
+    # Display the window which lets the user choose the game options
+    walls = message_box_levels('Welcome to the snake!')
 
     # Width of the pygame window
     width = 500
@@ -329,13 +398,13 @@ def main():
         # If the snake eats itself (not something very intelligent to do), you lose
         for x in range(len(s.body)):
             if s.body[x].pos in list(map(lambda z:z.pos, s.body[x+1:])):
-                # Print the score, that is the length of the snake, achieved by the player
-                print('Score: ', len(s.body))
-                # Display a message for playing again
-                message_box('You lost!', 'Play again...')
-                # Reset the game
-                s.reset((10,10))
+                #Display the message for resetting the game
+                walls = lost_game(len(s.body))
                 break
+
+        # If the walls are active, you can also lose by hitting them (something not very intelligent either)
+        if s.walls_hit == 1:
+            walls = lost_game(len(s.body))
         
         # every frame (or however you call it) redraw the window
         redrawWindow(win)

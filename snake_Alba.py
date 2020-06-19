@@ -51,7 +51,7 @@ class cube(object):
 
         # We draw the square in which the cube is
         pygame.draw.rect(surface, self.color, (i*dis+1, j*dis+1, dis-2, dis-2))
-        
+
         # We don't want the snake blind, so we better draw some eyes on the head cube
         if eyes:
             centre = dis//2
@@ -93,7 +93,7 @@ class snake(object):
             # If the player wants to quit, he/she should have the right, right?
             if event.type == pygame.QUIT:
                 pygame.quit()
-            
+
             # If a key is pressed, we need to know which one is
             keys = pygame.key.get_pressed()
 
@@ -167,8 +167,9 @@ class snake(object):
 
         Returns:
             walls: variable which tells you whether the player has decided to turn on the walls or not
+            rot_apple_on: variable which tells you whether the player wants to play with rotten apples
         """
-        walls = message_box_levels('Welcome to the snake!') #The player chooses the walls active or not
+        walls, rot_apple_on = message_box_levels('Welcome to the snake!')
         # The next commands initialize the snake performing almost the same as the __init__ function
         self.head = cube(pos)
         self.body = []
@@ -177,7 +178,7 @@ class snake(object):
         self.dirnx = 0
         self.dirny = 1
         self.walls_hit = 0
-        return walls
+        return walls, rot_apple_on
 
     def addCube(self):
         """When the snake eats a snack, it grows by adding a cube to its body
@@ -199,6 +200,13 @@ class snake(object):
         # Set the direction for the added cube
         self.body[-1].dirnx = dx
         self.body[-1].dirny = dy
+
+    def removeCube(self):
+        """When the snake eats a rotten apple, its length is reduced by one,
+        removing the last cube of its body
+        """
+        tail = self.body[-1]
+        self.body.remove(tail)
 
     def draw(self, surface):
         """Draw the snake so that the player knows what is going on
@@ -228,7 +236,7 @@ def drawGrid(width, rows, surface):
 
     # Plot all the horizontal and vertical white lines
     x = 0; y = 0
-    color_lines = (255, 255, 255) #White
+    color_lines = (255, 255, 255) # White
     for l in range(rows):
         x += size_between # Every iteration add the size of the square in order to plot the next line
         y += size_between
@@ -249,11 +257,15 @@ def redrawWindow(surface):
         surface (window?): window in which the grid will be displayed
     """
     # s is the snake, the rest of variables I find them self-explanatory
-    global rows, width, s, snack
+    global rows, width, s, snack, rot_apple
     color_surface = (0, 0, 0) #Black
     surface.fill(color_surface) #Black background
     s.draw(surface) #Plot the snake
     snack.draw(surface) #Plot the snack
+    # If the player has decided to play with rotten apples, they appear if the 
+    # snake is more than only the head
+    if len(s.body) > 1 and rot_apple_on == 1:
+        rot_apple.draw(surface)
     drawGrid(width, rows, surface) #Plot the white lines of the grid
     pygame.display.update() #Update the changes done on the window
 
@@ -278,7 +290,7 @@ def randomSnack(rows, item):
         # Find a new random position for the snack
         x = random.randrange(rows)
         y = random.randrange(rows)
-        # Make sure we don't put a snack on top of the snake. Otherwise, just look for a new position
+        # Make sure we don't put a snack on top of the snake
         if len(list(filter(lambda z:z.pos == (x,y), positions))) > 0:
             continue
         else:
@@ -292,8 +304,10 @@ def lost_game(score):
         score (int): length of the snake, which represents your score
 
     Returns:
-        walls (boolean): only if the player has decided to play again, returns the walls variable, which
+        walls (boolean): if the player has decided to play again, returns the walls variable, which
         represents the user choice of the walls or not 
+        rot_apple_on (boolean): if the player has decided to play again, returns its choose regading
+        the appearance of rotten apples 
     """
     # Print the score you have achieved
     print('Score: ', score)
@@ -303,27 +317,28 @@ def lost_game(score):
     # Make sure that the window appears on top
     root.attributes('-topmost', True)
     root.withdraw()
-    # Appear the message box which asks a question
-    MsgBox = messagebox.askquestion ('You lost...','Play again?')
+    # Appear the message box which asks a question and displays the score
+    content = 'You lost. Your score was ' + str(score)
+    MsgBox = messagebox.askquestion (content,'Play again?')
     if MsgBox == 'yes':
         # If you want to play again, destroy the window which tells you you've lost, and reset
         # the game.
         root.destroy()
-        walls = s.reset((10,10))
-        return walls
+        walls, rot_apple_on = s.reset((10,10))
+        return walls, rot_apple_on
     else:
         # If you don't want to play again (coward), exit python
         exit()
 
 def message_box_levels(subject):
-    """Function for the beginning of the game which lets you choose the levels of the game.
-    For now, you can only choose whether you want walls or not on the game.
+    """Function for the beginning of the game which lets you choose the game options
 
     Args:
         subject (string): message seen by the player
 
     Returns:
         walls (boolean): represents the player choice of the walls active or not
+        rot_apple_on (boolean): represents the player choice of the appearance of rotten apples
     """
 
     # Create a window in which the player can choose the game options
@@ -347,6 +362,11 @@ def message_box_levels(subject):
     c = tk.Checkbutton(root, text="Walls limit", variable = walls)
     c.pack()
 
+    # Same checkbutton as before for activating the rotten apples
+    rot_apple_on = tk.IntVar()
+    d = tk.Checkbutton(root, text="Rotten apples", variable = rot_apple_on)
+    d.pack()
+
     # Button for the starting of the game. Once clicked it destroys the window of the levels
     b = tk.Button(root, text="Let's play", command=callback)
     b.pack()
@@ -354,16 +374,16 @@ def message_box_levels(subject):
     # Start the window so that everything is displayed
     root.mainloop()
     
-    return walls.get()
+    return walls.get(), rot_apple_on.get()
 
 def main():
     """Main function which relates the rest of functions and classes
     """
     # Make global all the following self-explanatory variables (s = snake)
-    global width, rows, s, snack, walls
+    global width, rows, s, snack, rot_apple, walls, rot_apple_on
 
-    # Display the window which lets the user choose the game options
-    walls = message_box_levels('Welcome to the snake!')
+    # Display the window which lets the user choose the game options 
+    walls, rot_apple_on = message_box_levels('Welcome to the snake!')
 
     # Width of the pygame window
     width = 500
@@ -376,6 +396,7 @@ def main():
     color = (255, 0, 0) # color of the snake
     s = snake(color, position) #Initialize the snake
     snack = cube(randomSnack(rows, s), color = (0, 255, 0)) #Initialize the snack
+    rot_apple = cube(randomSnack(rows, s), color = (100,100,100)) #Initialize the rotten apple
     flag = True #auxiliar variable which is true until you lost
 
     clock = pygame.time.Clock() # activate the game clock
@@ -394,17 +415,23 @@ def main():
         if s.body[0].pos == snack.pos:
             s.addCube()
             snack = cube(randomSnack(rows, s), color = (0, 255, 0))
+        
+        # If the snake eats a rotten apple, and the player has decided to play with rotten apples
+        # the length of the snake is reduced by one
+        if s.body[0].pos == rot_apple.pos and rot_apple_on == 1:
+            s.removeCube()
+            rot_apple = cube(randomSnack(rows, s), color = (100,100,100))
 
         # If the snake eats itself (not something very intelligent to do), you lose
         for x in range(len(s.body)):
             if s.body[x].pos in list(map(lambda z:z.pos, s.body[x+1:])):
                 #Display the message for resetting the game
-                walls = lost_game(len(s.body))
+                walls, rot_apple_on = lost_game(len(s.body))
                 break
 
         # If the walls are active, you can also lose by hitting them (something not very intelligent either)
         if s.walls_hit == 1:
-            walls = lost_game(len(s.body))
+            walls, rot_apple_on = lost_game(len(s.body))
         
         # every frame (or however you call it) redraw the window
         redrawWindow(win)

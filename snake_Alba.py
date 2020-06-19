@@ -4,6 +4,7 @@ import random
 import pygame
 import tkinter as tk
 from tkinter import messagebox
+from PIL import ImageTk, Image
 
 class cube(object):
     """This class creates and manages the cubes. 
@@ -11,7 +12,7 @@ class cube(object):
     """
     rows = 20
     width = 500
-    def __init__(self, start, dirnx = 1, dirny = 0, color = (148,0,211)):
+    def __init__(self, start, dirnx = 1, dirny = 0, color = (120,153,0)):
         """Initialize the cube objects by setting the arguments:
 
         Args:
@@ -46,7 +47,7 @@ class cube(object):
             Defaults to False because the snake only has eyes on the head (xD)
             tail (bool, optional): The tail of the snake is a triangle instead of an octahedra
         """
-        dis = self.width // self.rows #width of each square of the grid
+        dis = self.width // self.rows
         i = self.pos[0] #row
         j = self.pos[1] #column
 
@@ -90,7 +91,7 @@ class cube(object):
         dis = self.width // self.rows #width of each square of the grid
         i = self.pos[0] #row
         j = self.pos[1] #column
-
+        
         # Set the color of the apple depending on whether it's rotten, poisoned or tasty
         if rotten:
             color = (100,100,100)
@@ -142,13 +143,13 @@ class snake(object):
             # If the player wants to quit, he/she should have the right, right?
             if event.type == pygame.QUIT:
                 pygame.quit()
-
+            
             # If a key is pressed, we need to know which one is
             keys = pygame.key.get_pressed()
 
             for key in keys:
                 # In this for loop, we change the direction of the snake according to the key
-                # pressed by the player
+                # pressed by the player 
                 if keys[pygame.K_LEFT]:
                     self.dirnx = -1
                     self.dirny = 0
@@ -286,7 +287,7 @@ def drawGrid(width, rows, surface):
     """
     # How big each square is gonna be
     size_between = width // rows
-
+    
     # Plot all the horizontal and vertical white lines
     x = 0; y = 0
     color_lines = (255, 255, 255) # White
@@ -354,12 +355,13 @@ def randomSnack(rows, item, item_list):
         # Find a new random position for the snack
         x = random.randrange(rows)
         y = random.randrange(rows)
-        # Make sure we don't put an apple on top of the snake
+        # Make sure we don't put a snack on top of the snake
         if len(list(filter(lambda z:z.pos == (x,y), positions))) > 0:
             continue
         else:
             break
-        # Make sure we don't put an apple on top of another apple
+
+        # Make sure we don't put apples on top of another apple
         for it in range(len(item_list)):
             print(item_list[it].pos)
             if x == item_list[it].pos[0] and y == item_list[it].pos[0]:
@@ -419,6 +421,13 @@ def message_box_levels(subject):
     #Make sure that the window appears on top
     root.attributes('-topmost', True)
 
+    # Export and display snake image for the making the game more aestheticall
+    im = Image.open("0_snake.png")
+    im=im.resize((200,200), Image.ANTIALIAS)
+    img = ImageTk.PhotoImage(image = im)
+    panel = tk.Label(root, image = img)
+    panel.pack(side = "left")
+
     def callback():
         """Function which activates when the player clicks the "let's play" button
         It destroys the window of the levels so that the pygame window can appear
@@ -446,7 +455,7 @@ def message_box_levels(subject):
     d.pack()
 
     # Button for the starting of the game. Once clicked it destroys the window of the levels
-    b = tk.Button(root, text="Let's play", command=callback)
+    b = tk.Button(root, text="Let's play!", command=callback)
     b.pack()
 
     # Start the window so that everything is displayed
@@ -471,7 +480,7 @@ def main():
     win = pygame.display.set_mode((width, width))
     # Determine the initial position of the snake in the middle of the window
     position = (int(rows/2), int(rows/2))
-    color = (148,0,211) # color of the snake
+    color = (120,153,0) # color of the snake
     s = snake(color, position) #Initialize the snake
     snack = cube(randomSnack(rows, s, []), color = (255,0, 0)) #Initialize the snack
     rot_apple = cube(randomSnack(rows, s, [snack]), color = (100,100,100)) #Initialize the rotten apple

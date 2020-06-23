@@ -4,4 +4,6 @@ This repository is my first experiment with python games. It all started one day
 
 Once finished the game, I thought about some additional features: adding walls so that the game would be more difficult, add rotten apples which made you decrease in size, instead of increase in size, etc. So I started playing around, and I added all the improvements I could think of. 
 
-I know the code is not perfect nor efficient. But due to it, I have learned good practices in Python, how to use GitHub, and improved my knowledge of object-oriented programming.
+You can compare those two files. The simple original one with the code copied from internet, and my code based on that one with all the additional features.
+
+I know that the code can be improved, but thanks to it, I have learned good practices in Python, how to use GitHub, and improved my knowledge of object-oriented programming.
